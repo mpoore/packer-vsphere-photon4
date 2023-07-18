@@ -22,8 +22,7 @@ packer {
 #                              Local Variables                               #
 # -------------------------------------------------------------------------- #
 locals { 
-    build_version               = formatdate("YY.MM", timestamp())
-    build_date                  = formatdate("YYYY-MM-DD hh:mm ZZZ", timestamp())
+    build_version               = formatdate("YY.MM (DD.hhmm)", timestamp())
     ks_content                  = {
                                     "ks.cfg" = templatefile("${abspath(path.root)}/config/ks.pkrtpl.hcl", {
                                         build_username            = var.build_username
@@ -32,7 +31,7 @@ locals {
                                         admin_password            = var.admin_password
                                     })
                                   }
-    vm_description              = "VER: ${ local.build_version }\nDATE: ${ local.build_date }\nISO: ${ var.os_iso_file }"
+    vm_description              = "VER: ${ local.build_version }\nISO: ${ var.os_iso_file }"
 }
 
 # -------------------------------------------------------------------------- #
@@ -67,7 +66,7 @@ source "vsphere-iso" "photon4" {
 
     # Virtual Machine
     guest_os_type               = var.vm_guestos_type
-    vm_name                     = "${ source.name }-${ var.build_branch }-${ local.build_version }"
+    vm_name                     = "${ source.name }-${ var.build_branch }"
     notes                       = local.vm_description
     firmware                    = var.vm_firmware
     CPUs                        = var.vm_cpu_sockets
@@ -120,8 +119,9 @@ build {
         execute_command     = "echo '${ var.build_password }' | {{.Vars}} sudo -E -S sh -eu '{{.Path}}'"
         scripts             = var.script_files
         environment_vars    = [ "PKISERVER=${ var.build_pkiserver }",
-                                "ANSIBLEUSER=${ var.build_ansible_user }",
-                                "ANSIBLEKEY=${ var.build_ansible_key }" ]
+                                "BUILDVERSION=${ local.build_version }",
+                                "BUILDREPO=${ var.build_repo }",
+                                "BUILDBRANCH=${ var.build_branch }" ]
     }
 
     post-processor "manifest" {
@@ -134,7 +134,6 @@ build {
             build_repo      = var.build_repo
             build_branch    = var.build_branch
             build_version   = local.build_version
-            build_date      = local.build_date
         }
     }
 }
